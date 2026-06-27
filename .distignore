@@ -1,0 +1,16 @@
+.git
+.gitignore
+.github
+.history
+bin
+tests
+composer.json
+composer.lock
+node_modules
+vendor
+phpunit.xml.dist
+phpunit.sqlite.xml.dist
+.editorconfig
+Gruntfile.js
+package.json
+package-lock.json
