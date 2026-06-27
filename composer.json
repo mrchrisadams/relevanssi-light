@@ -14,12 +14,26 @@
         "wpreadme2markdown/wp2md": "*",
         "phpunit/phpunit": "^9.0",
         "yoast/phpunit-polyfills": "^2.0",
-        "wp-phpunit/wp-phpunit": "^6.0"
+        "wp-phpunit/wp-phpunit": "^6.0",
+        "wordpress/sqlite-database-integration": "dev-trunk"
     },
     "scripts": {
         "lint": "./vendor/bin/phpcs -p -s",
         "readme": "./vendor/bin/wp2md < readme.txt > readme.md",
         "test": "./vendor/bin/phpunit",
         "test:sqlite": "./vendor/bin/phpunit -c phpunit.sqlite.xml.dist"
-    }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "composer/installers": true,
+            "php-http/discovery": true
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/WordPress/sqlite-database-integration"
+        }
+    ]
 }

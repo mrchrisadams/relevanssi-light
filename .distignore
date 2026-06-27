@@ -8,6 +8,7 @@ composer.json
 composer.lock
 node_modules
 vendor
+.wp-test
 phpunit.xml.dist
 phpunit.sqlite.xml.dist
 .editorconfig
