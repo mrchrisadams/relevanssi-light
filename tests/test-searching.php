@@ -63,6 +63,9 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 		foreach ( $this->post_ids as $pid ) {
 			relevanssi_light_update_post_data( $pid );
 		}
+
+		// Flush the FULLTEXT index cache (see refresh_fts_index()).
+		$this->refresh_fts_index();
 	}
 
 	/**
@@ -85,6 +88,28 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 				relevanssi_light_alter_table();
 			}
 		}
+	}
+
+	/**
+	 * Commit and restart the WP test transaction.
+	 *
+	 * InnoDB/MariaDB FULLTEXT indexes do not index rows within an
+	 * uncommitted transaction. The WP test framework wraps each test
+	 * in a transaction (so it can roll back at the end). This helper
+	 * commits (flushing the FTS cache so MATCH ... AGAINST works) and
+	 * starts a fresh transaction so that tear_down() can roll back
+	 * without error.
+	 *
+	 * On SQLite this is a no-op (FTS5 indexes are immediately visible
+	 * within the same connection).
+	 */
+	protected function refresh_fts_index() {
+		if ( function_exists( 'relevanssi_light_is_sqlite' ) && relevanssi_light_is_sqlite() ) {
+			return;
+		}
+		global $wpdb;
+		$wpdb->query( 'COMMIT;' );
+		$wpdb->query( 'START TRANSACTION;' );
 	}
 
 	/**
@@ -170,6 +195,9 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 		);
 		relevanssi_light_update_post_data( $low_relevance );
 
+		// Flush the FULLTEXT index so the new post is searchable.
+		$this->refresh_fts_index();
+
 		$results = $this->search( 'apple' );
 
 		$this->assertContains( $high_relevance, $results );
@@ -204,6 +232,9 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 		update_post_meta( $post_id, '_test_meta', 'supercalifragilistic' );
 		relevanssi_light_update_post_data( $post_id );
 
+		// Flush the FULLTEXT index so the new post is searchable.
+		$this->refresh_fts_index();
+
 		// Remove the filter after updating.
 		remove_all_filters( 'relevanssi_light_custom_fields' );
 
@@ -229,6 +260,9 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 		);
 		update_post_meta( $post_id, '_test_meta', 'unfindablekeywordxyz' );
 		relevanssi_light_update_post_data( $post_id );
+
+		// Flush the FULLTEXT index so the new post is searchable.
+		$this->refresh_fts_index();
 
 		$results = $this->search( 'unfindablekeywordxyz' );
 

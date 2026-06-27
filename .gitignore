@@ -1,3 +1,9 @@
 /vendor/
 /node_modules/
 /.history/
+/wp-content/
+/.wp-test/
+/.phpunit.result.cache
+composer.lock
+.phpactor.json
+*.bak
