@@ -73,6 +73,11 @@ function relevanssi_light_options_page() {
 				Light automatically adjusts the database queries to use the
 				fulltext index it creates.</p>
 
+			<p>This is a fork that adds support for <strong>SQLite</strong>
+				databases (via the FTS5 fulltext search extension). It also
+				remains compatible with MySQL/MariaDB. The appropriate engine
+				is detected automatically.</p>
+
 			<p>Relevanssi Light is kept very lean on purpose. There are few
 				settings to adjust. If you like adjusting settings, <a
 				href="https://wordpress.org/plugins/relevanssi/">Relevanssi</a>
@@ -109,7 +114,7 @@ function relevanssi_light_options_page() {
 				names with the <code>relevanssi_light_custom_fields</code>
 				filter hook. For example, in order to include the custom fields
 				<code>_sku</code> and <code>seo_meta_desc</code> in the index,
-				you could add this to the theme <code>functions.php</code>:</p>
+				you could add this to your theme <code>functions.php</code>:</p>
 
 			<p><code>add_filter( 'relevanssi_light_custom_fields', function( $fields ) { return array( '_sku', 'seo_meta_desc' ); } );</code></p>
 
@@ -128,7 +133,9 @@ function relevanssi_light_options_page() {
 
 			<p>After you've made changes to the post update data actions, you can
 				click the "Process all posts" button below to have Relevanssi Light
-				process all your posts to update the data.</p>
+				process all your posts to update the data. This is required after
+				installing the plugin for the first time to populate the FTS5
+				search index (or the MySQL fulltext index).</p>
 
 			<form method='post'>
 				<input type="button" id='process' class='button button-primary' value='Process all posts' />
@@ -140,7 +147,7 @@ function relevanssi_light_options_page() {
 			<h3>Feedback and Credits</h3>
 
 			<p>Relevanssi Light is written by <a href="https://www.mikkosaari.fi/">Mikko
-			Saari</a>.</p>
+			Saari</a>. SQLite FTS5 support added in a local fork.</p>
 
 			<p>If you have any questions, please post them to the <a
 			href="https://wordpress.org/support/plugin/relevanssi-light/">Relevanssi

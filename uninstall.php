@@ -29,17 +29,28 @@ if ( function_exists( 'is_multisite' ) && is_multisite() ) {
 /**
  * Removes Relevanssi Light features from the database tables and options.
  *
- * Removes the relevanssi_light_data column, the relevanssi_light_fulltext
- * index, and the relevanssi_light option.
+ * For MySQL: Removes the relevanssi_light_data column, the
+ * relevanssi_light_fulltext index, and the relevanssi_light option.
+ *
+ * For SQLite: Drops the wp_relevanssi_light_fts FTS5 virtual table
+ * and the relevanssi_light option.
  */
 function relevanssi_light_uninstall() {
 	global $wpdb;
 
-	$sql = "ALTER TABLE $wpdb->posts DROP COLUMN `relevanssi_light_data`";
-	$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery
+	if ( function_exists( 'relevanssi_light_is_sqlite' ) && relevanssi_light_is_sqlite() ) {
+		// SQLite path: drop the FTS5 virtual table.
+		$fts_table = $wpdb->prefix . 'relevanssi_light_fts';
+		$sql       = "DROP TABLE IF EXISTS $fts_table";
+		$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery
+	} else {
+		// MySQL path: drop column and fulltext index.
+		$sql = "ALTER TABLE $wpdb->posts DROP COLUMN `relevanssi_light_data`";
+		$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery
 
-	$sql = "ALTER TABLE $wpdb->posts DROP INDEX `relevanssi_light_fulltext`";
-	$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery
+		$sql = "ALTER TABLE $wpdb->posts DROP INDEX `relevanssi_light_fulltext`";
+		$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery
+	}
 
 	delete_option( 'relevanssi_light' );
 	delete_option( 'relevanssi_light_activated' );
