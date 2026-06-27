@@ -1,6 +1,7 @@
 {
     "name": "msaari/relevanssi-light",
     "description": "A simple, quick and effective search improvement that replaces the default WP search with a fulltext index search.",
+    "type": "wordpress-plugin",
     "require": {
         "php": "^7.2 || ^8.0"
     },
@@ -10,10 +11,15 @@
         "phpcompatibility/php-compatibility": "^9.3",
         "phpcompatibility/phpcompatibility-wp": "^2.1",
         "wp-coding-standards/wpcs": "*",
-		"wpreadme2markdown/wp2md": "*"
+        "wpreadme2markdown/wp2md": "*",
+        "phpunit/phpunit": "^9.0",
+        "yoast/phpunit-polyfills": "^2.0",
+        "wp-phpunit/wp-phpunit": "^6.0"
     },
     "scripts": {
         "lint": "./vendor/bin/phpcs -p -s",
-		"readme": "./vendor/bin/wp2md < readme.txt > readme.md"
+        "readme": "./vendor/bin/wp2md < readme.txt > readme.md",
+        "test": "./vendor/bin/phpunit",
+        "test:sqlite": "./vendor/bin/phpunit -c phpunit.sqlite.xml.dist"
     }
 }
