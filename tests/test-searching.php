@@ -66,20 +66,24 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Ensure the FULLTEXT index and column exist.
+	 * Ensure the fulltext index infrastructure exists.
 	 *
-	 * Calls the plugin's own table alteration function.
+	 * Calls the plugin's own table alteration function, which handles
+	 * both MySQL (column + FULLTEXT index) and SQLite (FTS5 virtual table).
 	 */
 	protected function setup_database() {
-		global $wpdb;
-
-		// Check if the column already exists; if so, skip.
-		$column_exists = $wpdb->get_row(
-			"SHOW COLUMNS FROM $wpdb->posts LIKE 'relevanssi_light_data'"
-		);
-
-		if ( ! $column_exists ) {
-			relevanssi_light_alter_table();
+		if ( function_exists( 'relevanssi_light_is_sqlite' ) && relevanssi_light_is_sqlite() ) {
+			// SQLite path: ensure the FTS5 virtual table exists.
+			relevanssi_light_create_fts_table();
+		} else {
+			global $wpdb;
+			// MySQL path: check if the column already exists; if so, skip.
+			$column_exists = $wpdb->get_row(
+				"SHOW COLUMNS FROM $wpdb->posts LIKE 'relevanssi_light_data'"
+			);
+			if ( ! $column_exists ) {
+				relevanssi_light_alter_table();
+			}
 		}
 	}
 
@@ -233,23 +237,41 @@ class Relevanssi_Light_Search_Test extends WP_UnitTestCase {
 
 	/**
 	 * Test the posts_search filter modifies the WHERE clause.
+	 *
+	 * On MySQL, the WHERE clause contains MATCH...AGAINST.
+	 * On SQLite, the WHERE clause contains an IN(...) clause.
 	 */
-	public function test_posts_search_filter_returns_match_against() {
+	public function test_posts_search_filter_modifies_where_clause() {
 		$query = new WP_Query( array( 's' => 'apple' ) );
 
-		// The filter should have replaced the default search SQL.
-		// We can verify by checking that the query's request contains MATCH.
 		$request = $query->request;
 
-		$this->assertStringContainsStringIgnoringCase( 'MATCH', $request );
+		if ( function_exists( 'relevanssi_light_is_sqlite' ) && relevanssi_light_is_sqlite() ) {
+			// SQLite: the WHERE should contain an IN clause.
+			$this->assertStringContainsStringIgnoringCase( 'IN', $request );
+		} else {
+			// MySQL: the WHERE should contain MATCH...AGAINST.
+			$this->assertStringContainsStringIgnoringCase( 'MATCH', $request );
+		}
 	}
 
 	/**
-	 * Test that the posts_request filter adds a relevance column.
+	 * Test that the query is modified for relevance ordering.
+	 *
+	 * On MySQL, the request contains a 'relevance' column.
+	 * On SQLite, the request contains a FIELD() ORDER BY clause.
 	 */
-	public function test_posts_request_adds_relevance_column() {
+	public function test_posts_request_adds_relevance_ordering() {
 		$query = new WP_Query( array( 's' => 'apple' ) );
 
-		$this->assertStringContainsStringIgnoringCase( 'relevance', $query->request );
+		$request = $query->request;
+
+		if ( function_exists( 'relevanssi_light_is_sqlite' ) && relevanssi_light_is_sqlite() ) {
+			// SQLite: the ORDER BY should contain FIELD().
+			$this->assertStringContainsStringIgnoringCase( 'FIELD', $request );
+		} else {
+			// MySQL: the request should contain 'relevance'.
+			$this->assertStringContainsStringIgnoringCase( 'relevance', $request );
+		}
 	}
 }
