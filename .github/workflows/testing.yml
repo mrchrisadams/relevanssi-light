@@ -1,0 +1,49 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [mysql, sqlite]
+        include:
+          - database: mysql
+            phpunit-config: phpunit.xml.dist
+          - database: sqlite
+            phpunit-config: phpunit.sqlite.xml.dist
+
+    name: ${{ matrix.database }} tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, sqlite3, pdo_sqlite
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Set up MySQL
+        if: matrix.database == 'mysql'
+        run: |
+          sudo /etc/init.d/mysql start
+          bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 latest
+
+      - name: Set up SQLite
+        if: matrix.database == 'sqlite'
+        run: bash bin/install-wp-tests-sqlite.sh
+
+      - name: Run tests
+        run: vendor/bin/phpunit -c ${{ matrix.phpunit-config }}

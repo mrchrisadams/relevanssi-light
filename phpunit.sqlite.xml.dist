@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <phpunit
-	bootstrap="tests/bootstrap.php"
+	bootstrap="tests/bootstrap-sqlite.php"
 	backupGlobals="false"
 	colors="true"
 	convertErrorsToExceptions="true"
@@ -17,5 +17,6 @@
 	</testsuites>
 	<php>
 		<env name="WP_TESTS_DIR" value="/tmp/wordpress-tests-lib"/>
+		<env name="WP_CORE_DIR" value="/tmp/wordpress/"/>
 	</php>
 </phpunit>
