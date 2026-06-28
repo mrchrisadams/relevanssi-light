@@ -1,0 +1,80 @@
+when:
+  - event: ["push", "pull_request"]
+    branch: ["master", "main"]
+
+engine: microvm
+image: nixos
+
+dependencies:
+  # php82 in nixpkgs is already built with all common extensions,
+  # including mysqli, pdo_mysql, pdo_sqlite, sqlite3, curl, openssl, etc.
+  # See pkgs/development/interpreters/php/default.nix in nixpkgs.
+  - php82
+  - mariadb
+  - git
+  - curl
+  - unzip
+  - gnutar
+  - gzip
+
+clone:
+  depth: 1
+  submodules: false
+
+environment:
+  DB_NAME: wordpress_test
+  DB_USER: root
+  DB_PASS: root
+  DB_HOST: 127.0.0.1
+
+steps:
+  - name: "Start MariaDB"
+    command: |
+      set -e
+      # Create data directory and initialize MariaDB
+      mkdir -p /tmp/mariadb-data
+      # Only initialize if the data dir is empty
+      if [ ! -f /tmp/mariadb-data/mysql/user.MYD ]; then
+        mysql_install_db --datadir=/tmp/mariadb-data --user=$(id -u)
+      fi
+      # Start mysqld in the background with auth disabled for testing
+      # Redirect output so the step can finish cleanly
+      nohup mysqld --datadir=/tmp/mariadb-data \
+             --socket=/tmp/mariadb.sock \
+             --bind-address=127.0.0.1 \
+             --port=3306 \
+             --skip-grant-tables \
+             --pid-file=/tmp/mariadb.pid \
+             > /tmp/mariadb.log 2>&1 &
+      # Wait for the server to be ready
+      for i in {1..30}; do
+        if mysqladmin -h 127.0.0.1 ping --silent 2>/dev/null; then
+          echo "MariaDB is ready"
+          break
+        fi
+        sleep 1
+      done
+
+  - name: "Install Composer"
+    command: |
+      php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      php composer-setup.php --quiet
+      php -r "unlink('composer-setup.php');"
+      mv composer.phar composer
+      chmod +x composer
+      ./composer --version
+
+  - name: "Install Composer dependencies"
+    command: |
+      # If you see "Could not authenticate against github.com", add a
+      # GITHUB_TOKEN secret under your Tangled repo Settings → Secrets.
+      if [ -n "$GITHUB_TOKEN" ]; then
+        export COMPOSER_AUTH='{"github-oauth": {"github.com": "'$GITHUB_TOKEN'"}}'
+      fi
+      ./composer install --no-interaction --prefer-source
+
+  - name: "Set up WordPress test suite"
+    command: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 latest
+
+  - name: "Run MySQL tests"
+    command: vendor/bin/phpunit -c phpunit.xml.dist

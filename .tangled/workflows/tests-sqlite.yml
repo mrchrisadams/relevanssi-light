@@ -1,0 +1,53 @@
+when:
+  - event: ["push", "pull_request"]
+    branch: ["master", "main"]
+
+engine: microvm
+image: nixos
+
+dependencies:
+  # php82 in nixpkgs includes sqlite3 and pdo_sqlite by default.
+  # See pkgs/development/interpreters/php/default.nix in nixpkgs.
+  - php82
+  - git
+  - curl
+  - unzip
+  - gnutar
+  - gzip
+
+clone:
+  depth: 1
+  submodules: false
+
+steps:
+  - name: "Install Composer"
+    command: |
+      php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+      php composer-setup.php --quiet
+      php -r "unlink('composer-setup.php');"
+      mv composer.phar composer
+      chmod +x composer
+      ./composer --version
+
+  - name: "Install Composer dependencies"
+    command: |
+      # If you see "Could not authenticate against github.com", add a
+      # GITHUB_TOKEN secret under your Tangled repo Settings → Secrets.
+      if [ -n "$GITHUB_TOKEN" ]; then
+        export COMPOSER_AUTH='{"github-oauth": {"github.com": "'$GITHUB_TOKEN'"}}'
+      fi
+      ./composer install --no-interaction --prefer-source
+
+  - name: "Set up SQLite WordPress test suite"
+    command: |
+      # Make our local composer binary available to the install script
+      export PATH="$PWD:$PATH"
+      # If you see "Could not authenticate against github.com", add a
+      # GITHUB_TOKEN secret under your Tangled repo Settings → Secrets.
+      if [ -n "$GITHUB_TOKEN" ]; then
+        export COMPOSER_AUTH='{"github-oauth": {"github.com": "'$GITHUB_TOKEN'"}}'
+      fi
+      bash bin/install-wp-tests-sqlite.sh
+
+  - name: "Run SQLite tests"
+    command: vendor/bin/phpunit -c phpunit.sqlite.xml.dist
