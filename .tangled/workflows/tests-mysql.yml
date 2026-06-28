@@ -1,0 +1,62 @@
+when:
+  - event: ["push", "pull_request"]
+    branch: ["master", "main"]
+
+engine: microvm
+image: nixos
+
+dependencies:
+  # php82 in nixpkgs is already built with all common extensions,
+  # including mysqli, pdo_mysql, pdo_sqlite, sqlite3, curl, openssl, etc.
+  # See pkgs/development/interpreters/php/default.nix in nixpkgs.
+  - php82
+  - php82Packages.composer
+  - mariadb
+  - git
+  - curl
+  - unzip
+  - gnutar
+  - gzip
+
+services:
+  mysql:
+    enable: true
+    package: pkgs.mariadb
+    settings:
+      mariadb:
+        bind-address: "127.0.0.1"
+
+clone:
+  depth: 1
+  submodules: false
+
+environment:
+  DB_NAME: wordpress_test
+  DB_USER: root
+  DB_PASS: root
+  DB_HOST: 127.0.0.1
+
+steps:
+  - name: "Install Composer dependencies"
+    command: composer install --no-interaction --prefer-source
+
+  - name: "Create MySQL test database"
+    command: |
+      set -e
+      # Wait for MariaDB to be ready
+      for i in {1..30}; do
+        if mysqladmin ping --silent; then
+          break
+        fi
+        sleep 1
+      done
+      # Create database and set root password to match original workflow
+      sudo mysql -e "CREATE DATABASE IF NOT EXISTS wordpress_test;"
+      sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'root';"
+      sudo mysql -e "FLUSH PRIVILEGES;"
+
+  - name: "Set up WordPress test suite"
+    command: bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1 latest
+
+  - name: "Run MySQL tests"
+    command: vendor/bin/phpunit -c phpunit.xml.dist
